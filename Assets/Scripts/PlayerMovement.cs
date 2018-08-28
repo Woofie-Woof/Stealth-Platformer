@@ -6,22 +6,28 @@ public class PlayerMovement : MonoBehaviour {
 
 	public bool onGround;
 	public bool doubleJump;
-	public bool wallCling;
+	public bool canWallCling;
+	public bool clinged;
 	public bool move;
-	public int jumpStrength;
-	public int movementSpeed;
+	public float jumpStrength;
+	public float movementSpeed;
+	private float defaultSpeed;
 	private Vector2 wallDir;
 	private Vector2 tempDir;
 	private Rigidbody2D rbd;
+	public float wallClingWait;
 	// Use this for initialization
 	void Start () {
 		onGround = false;
 		doubleJump = false;
-		wallCling = false;
+		canWallCling = false;
+		clinged = false;
 		move = true;
 		rbd = GetComponent<Rigidbody2D>();
-		jumpStrength = 175;
-		movementSpeed = 2;
+		jumpStrength = 210;
+		defaultSpeed = 4;
+		movementSpeed = 4;
+		wallClingWait = 0.0f;
 	}
 	
 	// Update is called once per frame
@@ -34,30 +40,44 @@ public class PlayerMovement : MonoBehaviour {
 			transform.Translate(Vector2.right * Time.deltaTime * movementSpeed);
 		}
 
+		if(Input.GetKey("left shift") && onGround){
+			movementSpeed *= movementSpeed == defaultSpeed ? 2f : 1f;
+		}
+		else if(onGround || clinged){
+			movementSpeed /= movementSpeed > defaultSpeed ? 2f : 1f;
+		}
+
 		if(Input.GetKeyDown("space") && move){
-			if(onGround || (!wallCling && doubleJump)){
+			if(onGround || (!canWallCling && doubleJump)){
+				wallClingWait = onGround ? 0.2f : 0.0f;
 				rbd.AddForce(Vector2.up * jumpStrength);
 				doubleJump = onGround == false ? false : doubleJump;
 			}
-			// else if(wallCling){
-			// 	rbd.AddForce(wallDir * jumpStrength);
-			// }
 		}
 
 		if(Input.GetKey("space")){
-			if(wallCling){
+			if(canWallCling && wallClingWait <= 0){
 				move = false;
 				rbd.velocity = Vector2.zero;
 				rbd.angularVelocity = 0f;
 				rbd.gravityScale = 0;
+				clinged = true;
 			}
 		}
 
 		if(Input.GetKeyUp("space")) {
-			if(rbd.gravityScale == 0){
+			if(clinged){
 				rbd.gravityScale = 1;
 				move = true;
+				clinged = false;
+				if(Input.GetKey("up")){
+					rbd.AddForce(wallDir * jumpStrength);
+				}
 			}
+		}
+
+		if(wallClingWait > 0){
+			wallClingWait -= Time.deltaTime;
 		}
 	}
 
@@ -65,7 +85,7 @@ public class PlayerMovement : MonoBehaviour {
 		if(other.gameObject.tag == "Ground"){
 			onGround = true;
 			doubleJump = true;
-			wallCling = false;
+			canWallCling = false;
 		}
 	}
 
@@ -74,7 +94,7 @@ public class PlayerMovement : MonoBehaviour {
 			tempDir = other.GetContact(0).point - (new Vector2(transform.position.x, transform.position.y));
 			tempDir = -tempDir.normalized;
 			wallDir = new Vector2(tempDir.x, 1);
-			wallCling = true;
+			canWallCling = true;
 		}
 	}
 
@@ -83,7 +103,7 @@ public class PlayerMovement : MonoBehaviour {
 			onGround = false;
 		}
 		else if(other.gameObject.tag == "Wall"){
-			wallCling = false;
+			canWallCling = false;
 		}
 	}
 }
