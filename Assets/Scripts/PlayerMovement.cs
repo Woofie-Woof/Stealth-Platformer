@@ -6,8 +6,10 @@ public class PlayerMovement : MonoBehaviour {
 
 	public bool onGround;
 	public bool doubleJump;
-	public bool wallJump;
+	public bool wallCling;
+	public bool move;
 	public int jumpStrength;
+	public int movementSpeed;
 	private Vector2 wallDir;
 	private Vector2 tempDir;
 	private Rigidbody2D rbd;
@@ -15,28 +17,46 @@ public class PlayerMovement : MonoBehaviour {
 	void Start () {
 		onGround = false;
 		doubleJump = false;
-		wallJump = false;
+		wallCling = false;
+		move = true;
 		rbd = GetComponent<Rigidbody2D>();
 		jumpStrength = 175;
+		movementSpeed = 2;
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		if(Input.GetKey("left")){
-			transform.Translate(Vector2.left * Time.deltaTime);
+		if(Input.GetKey("left") && move){
+			transform.Translate(Vector2.left * Time.deltaTime * movementSpeed);
 		}
 
-		if(Input.GetKey("right")){
-			transform.Translate(Vector2.right * Time.deltaTime);
+		if(Input.GetKey("right") && move){
+			transform.Translate(Vector2.right * Time.deltaTime * movementSpeed);
 		}
 
-		if(Input.GetKeyDown("space")){
-			if(onGround || (!wallJump && doubleJump)){
+		if(Input.GetKeyDown("space") && move){
+			if(onGround || (!wallCling && doubleJump)){
 				rbd.AddForce(Vector2.up * jumpStrength);
 				doubleJump = onGround == false ? false : doubleJump;
 			}
-			else if(wallJump){
-				rbd.AddForce(wallDir * jumpStrength/2);
+			// else if(wallCling){
+			// 	rbd.AddForce(wallDir * jumpStrength);
+			// }
+		}
+
+		if(Input.GetKey("space")){
+			if(wallCling){
+				move = false;
+				rbd.velocity = Vector2.zero;
+				rbd.angularVelocity = 0f;
+				rbd.gravityScale = 0;
+			}
+		}
+
+		if(Input.GetKeyUp("space")) {
+			if(rbd.gravityScale == 0){
+				rbd.gravityScale = 1;
+				move = true;
 			}
 		}
 	}
@@ -45,7 +65,7 @@ public class PlayerMovement : MonoBehaviour {
 		if(other.gameObject.tag == "Ground"){
 			onGround = true;
 			doubleJump = true;
-			wallJump = false;
+			wallCling = false;
 		}
 	}
 
@@ -54,7 +74,7 @@ public class PlayerMovement : MonoBehaviour {
 			tempDir = other.GetContact(0).point - (new Vector2(transform.position.x, transform.position.y));
 			tempDir = -tempDir.normalized;
 			wallDir = new Vector2(tempDir.x, 1);
-			wallJump = true;
+			wallCling = true;
 		}
 	}
 
@@ -63,7 +83,7 @@ public class PlayerMovement : MonoBehaviour {
 			onGround = false;
 		}
 		else if(other.gameObject.tag == "Wall"){
-			wallJump = false;
+			wallCling = false;
 		}
 	}
 }
